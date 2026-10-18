@@ -4,7 +4,7 @@
  */
 (function () {
 'use strict';
-const {boot, Layer, palette, indexAt, u16, s16, u32, put16, put32, mod} = window.CODEFDemo;
+const {boot, IndexedLayer, palette, u16, s16, u32, put16, put32, mod} = window.CODEFDemo;
 
 class ChonchonClock {
   constructor(background, font, path, ys, wave, message, stars, index) {
@@ -72,7 +72,7 @@ async function createScene({assets, screen, sound}) {
   const resources = await Promise.all(['background.bin', 'font-source.bin', 'logo-path.bin', 'logo-y.bin', 'scroll-y.bin', 'message.bin', 'star-paths.bin', 'star-index.bin'].map(n => assets.bytes(n)));
   const clock = new ChonchonClock(...resources);
   const [logo, pal, raster, curve, meter] = await Promise.all([assets.image('logo-bank.png'), assets.bytes('palette.bin'), assets.bytes('raster.bin'), assets.bytes('volume-curve.bin'), assets.bytes('meter-raw.bin')]);
-  const stage = new Layer(), colors = palette(pal), rasters = palette(raster);
+  const stage = new IndexedLayer(), colors = palette(pal), rasters = palette(raster);
   clock.logoAway = false;
   const sharedColors = window.DMA40PanelExchange.colors(pal);
   const sharedLogo = window.DMA40PanelExchange.bakeIndexed(logo, sharedColors);
@@ -101,7 +101,15 @@ async function createScene({assets, screen, sound}) {
       stage.planar(clock.screen);
       if (!clock.logoAway) for (let row = 0; row < 63; row++) { const p = clock.logoRow(row); stage.blit(logo, p.x, p.y, 0, row * 17 + p.phase, 96, 1); }
     },
-    render() { const p = stage.pixels(); screen.paint((x, y, at) => { const i = indexAt(p, at); return i >= 8 && y >= 144 ? rasters[(y - 144) >> 1] : colors[i]; }); }
+    render(commit = true) {
+      const pixels=stage.pixels(),output=screen.rgba;
+      for(let pixel=0;pixel<144*320;pixel++)output[pixel]=colors[pixels[pixel]];
+      for(let y=144;y<200;y++){
+        const start=y*320,end=start+320,rasterColor=rasters[(y-144)>>1];
+        for(let pixel=start;pixel<end;pixel++)output[pixel]=pixels[pixel]>=8?rasterColor:colors[pixels[pixel]];
+      }
+      if(commit)screen.commit();
+    }
   };
 }
 

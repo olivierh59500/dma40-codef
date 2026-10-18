@@ -4,7 +4,7 @@
  */
 (function () {
 'use strict';
-const {boot, Layer, SliceStream, palette, stColor, indexAt, u16, s32, clamp} = window.CODEFDemo;
+const {boot, IndexedLayer, SliceStream, palette, stColor, indexedPixels, indexAt, u16, s32, clamp} = window.CODEFDemo;
 
 class RasterClock {
   constructor(blue, black, positions, small, wide, rolling) {
@@ -40,7 +40,17 @@ async function createScene({assets, screen, sound}) {
   const longs = b => Array.from({length: b.length / 4}, (_, i) => s32(b, i * 4));
   const logo = longs(logoWave), fold = longs(fromWave), scroll = longs(scrollWave);
   const rasters = new RasterClock(blue, black, longs(positions), thin, wide, rolling);
-  const state = {tick: 0, track: 2, jinxAway: false}, stage = new Layer(), smallMask = new Layer(), largeMask = new Layer(), colors = palette(pal), mat = palette(materials), titleColors = palette(titlePal);
+  const state = {tick: 0, track: 2, jinxAway: false}, stage = new IndexedLayer(), smallMask = new IndexedLayer(), largeMask = new IndexedLayer(), colors = palette(pal), mat = palette(materials), titleColors = palette(titlePal), titlePixels = indexedPixels(title);
+  const renderLookup = new Uint32Array(200 * 64);
+  for (let y = 0; y < 200; y++) for (let key = 0; key < 64; key++) {
+    let index = key & 15;
+    if (y >= 93) index = index - index % 2 + (key & 16 ? 1 : 0);
+    if (y >= 101) index = index - (index >> 1) % 2 * 2 + (key & 32 ? 2 : 0);
+    if (index === 2) renderLookup[y * 64 + key] = mat[200 + y];
+    else if (index === 3) renderLookup[y * 64 + key] = mat[y];
+    else if (y >= 93 && index === 1) renderLookup[y * 64 + key] = 0xffcccccc;
+    else if (index !== 0) renderLookup[y * 64 + key] = colors[index];
+  }
   const sharedColors = window.DMA40PanelExchange.colors(pal), sharedInk = Array.from({length:30}, () => null);
   sharedColors[1] = stColor(0x666);
   const sharedLogo = window.DMA40PanelExchange.bake(256, 30, (x, row) => {
@@ -114,19 +124,22 @@ async function createScene({assets, screen, sound}) {
         largeMask.rect(64 + bank * 128 + col * 32, 166 - h, 16, h, 15);
       }
     },
-    render() {
-      if (!scene.started) { screen.paint((x, y, at) => titleColors[indexAt(title.data, at)]); return; }
+    render(commit = true) {
+      if (!scene.started) {
+        for (let pixel = 0; pixel < titlePixels.length; pixel++) screen.rgba[pixel] = titleColors[titlePixels[pixel]];
+        if(commit)screen.commit(); return;
+      }
       const p = stage.pixels(), sm = smallMask.pixels(), lm = largeMask.pixels();
-      screen.paint((x, y, at) => {
-        let i = indexAt(p, at);
-        if (y >= 93) i = i - i % 2 + (sm[at + 3] > 127 ? 1 : 0);
-        if (y >= 101) i = i - (i >> 1) % 2 * 2 + (lm[at + 3] > 127 ? 2 : 0);
-        if (i === 0) return stColor(rasters.pixels[y]);
-        if (i === 2) return mat[200 + y];
-        if (i === 3) return mat[y];
-        if (y >= 93 && i === 1) return 0xffcccccc;
-        return colors[i];
-      });
+      const output = screen.rgba;
+      for (let y = 0; y < 200; y++) {
+        const start = y * 320, end = start + 320, lookup = y * 64;
+        const rasterColor = stColor(rasters.pixels[y]);
+        for (let pixel = start; pixel < end; pixel++) {
+          const color = renderLookup[lookup + p[pixel] + (sm[pixel] ? 16 : 0) + (lm[pixel] ? 32 : 0)];
+          output[pixel] = color || rasterColor;
+        }
+      }
+      if(commit)screen.commit();
     }
   };
   return scene;

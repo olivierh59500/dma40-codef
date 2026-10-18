@@ -7,6 +7,7 @@
   const STAR_RADIUS = 800;
   const TWO_PI = Math.PI * 2;
   const SETTLE_AT = 40;
+  const GRAY_STYLES = Array.from({length: 256}, (_, level) => `rgb(${level},${level},${level})`);
 
   const clamp = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value));
   const mix = (from, to, amount) => from + (to - from) * amount;
@@ -69,42 +70,55 @@
     return {position, rotation: rotation(angles)};
   }
 
-  function relative(view, point) {
-    let result = sub(point, view.position);
-    result = vec(wrap(result.x, STAR_RADIUS * 2), wrap(result.y, STAR_RADIUS * 2), wrap(result.z, STAR_RADIUS * 2));
-    const distance = Math.sqrt(dot(result, result));
+  function relativeInto(view, x, y, z, output) {
+    const relativeX = wrap(x - view.position.x, STAR_RADIUS * 2);
+    const relativeY = wrap(y - view.position.y, STAR_RADIUS * 2);
+    const relativeZ = wrap(z - view.position.z, STAR_RADIUS * 2);
+    const distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY + relativeZ * relativeZ);
     const fade = 1 - smooth(STAR_RADIUS * .76, STAR_RADIUS * .98, distance);
-    return {point: rotate(view.rotation, result), fade};
+    const matrix = view.rotation;
+    output.point.x = matrix[0] * relativeX + matrix[1] * relativeY + matrix[2] * relativeZ;
+    output.point.y = matrix[3] * relativeX + matrix[4] * relativeY + matrix[5] * relativeZ;
+    output.point.z = matrix[6] * relativeX + matrix[7] * relativeY + matrix[8] * relativeZ;
+    output.fade = fade;
+    return output;
   }
 
-  function project(point) {
-    if (point.z < 12) return null;
+  function projectInto(point, output) {
+    if (point.z < 12) return false;
     const amount = 360 / point.z;
-    return {x: 320 + point.x * amount, y: 200 + point.y * amount, z: point.z};
+    output.x = 320 + point.x * amount;
+    output.y = 200 + point.y * amount;
+    output.z = point.z;
+    return true;
   }
 
   function drawStars(effect, ctx, seconds, alpha = 1) {
     const view = flightAt(seconds);
     const previousView = flightAt(Math.max(0, seconds - .02));
+    const current = effect.currentStar;
+    const previous = effect.previousStar;
+    const point = effect.projectedStar;
+    const old = effect.previousProjectedStar;
+    const stars = effect.stars;
     ctx.save();
-    for (let index = 0; index < effect.stars.length; index++) {
-      const current = relative(view, effect.stars[index]);
+    for (let index = 0; index < STAR_COUNT; index++) {
+      const offset = index * 3;
+      relativeInto(view, stars[offset], stars[offset + 1], stars[offset + 2], current);
       if (current.fade <= 0) continue;
-      const point = project(current.point);
-      if (!point || point.x < 0 || point.x >= WIDTH || point.y < 0 || point.y >= HEIGHT) continue;
+      if (!projectInto(current.point, point) || point.x < 0 || point.x >= WIDTH || point.y < 0 || point.y >= HEIGHT) continue;
       const size = Math.max(.5, 3 - point.z / STAR_RADIUS * 2.5);
       const brightness = (1 - point.z / STAR_RADIUS * .7) * current.fade * alpha;
       if (point.z < STAR_RADIUS * .3) {
-        const previous = relative(previousView, effect.stars[index]);
-        const old = project(previous.point);
-        if (old && previous.fade > 0 && Math.hypot(point.x - old.x, point.y - old.y) < 24) {
+        relativeInto(previousView, stars[offset], stars[offset + 1], stars[offset + 2], previous);
+        if (projectInto(previous.point, old) && previous.fade > 0 && Math.hypot(point.x - old.x, point.y - old.y) < 24) {
           ctx.strokeStyle = `rgba(${128 * brightness | 0},${128 * brightness | 0},${128 * brightness | 0},${.5 * alpha})`;
           ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(old.x, old.y); ctx.lineTo(point.x, point.y); ctx.stroke();
         }
       }
       const level = clamp(brightness) * 255 | 0;
-      ctx.fillStyle = `rgb(${level},${level},${level})`;
+      ctx.fillStyle = GRAY_STYLES[level];
       ctx.fillRect(point.x, point.y, size, size);
     }
     ctx.restore();
@@ -165,15 +179,12 @@
     return segments.find(segment => milliseconds < segment.end) || segments.at(-1);
   }
 
-  function drawFontGlyph(ctx, image, character, centerX, centerY, amount, alpha = 1) {
+  function drawFontGlyph(ctx, image, character, centerX, centerY, amount, alpha, baseAlpha) {
     if (character === ' ' || amount <= 0) return;
     const index = clamp(character.charCodeAt(0) - 32, 0, 59);
     const size = 32 * amount;
-    ctx.save();
-    ctx.globalAlpha *= alpha;
-    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = baseAlpha * alpha;
     ctx.drawImage(image, index % 10 * 32, Math.floor(index / 10) * 32, 32, 32, centerX - size / 2, centerY - size / 2, size, size);
-    ctx.restore();
   }
 
   function drawPages(effect, ctx, images, seconds, alpha = 1) {
@@ -182,25 +193,34 @@
     const text = effect.pages[state.page];
     const exiting = milliseconds >= state.exit;
     const poses = effect.poses;
-    poses.length = 0;
+    const posePool = effect.posePool;
     for (let index = 0; index < text.length; index++) {
-      const target = {x: 16 + index % 20 * 32, y: 86 + Math.floor(index / 20) * 32, z: 1};
-      const center = {x: 320, y: 240, z: 1e-9};
+      const targetX = 16 + index % 20 * 32;
+      const targetY = 86 + Math.floor(index / 20) * 32;
       let amount;
       if (!exiting) amount = elasticOut((milliseconds - state.start - state.enter[index] * 20) / 2000);
       else amount = 1 - elasticIn((milliseconds - state.exit - state.leave[index] * 20) / 1000);
-      poses.push({index, character: text[index], x: mix(center.x, target.x, amount), y: mix(center.y, target.y, amount), z: mix(center.z, target.z, amount)});
+      const pose = posePool[index];
+      pose.character = text[index];
+      pose.x = mix(320, targetX, amount);
+      pose.y = mix(240, targetY, amount);
+      pose.z = mix(1e-9, 1, amount);
+      poses[index] = pose;
     }
     poses.sort((a, b) => a.z - b.z);
-    for (const pose of poses) drawFontGlyph(ctx, images.nonameFont, pose.character, pose.x, pose.y, pose.z, alpha);
+    const baseAlpha = ctx.globalAlpha;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    for (const pose of poses) drawFontGlyph(ctx, images.nonameFont, pose.character, pose.x, pose.y, pose.z, alpha, baseAlpha);
     const headings = ['MEMBERS OF DMA', 'GREETINGS', ''];
     const heading = headings[state.page];
     if (heading) {
       let headingAlpha = smooth(0, 1, seconds - state.start / 1000);
       if (exiting) headingAlpha *= 1 - smooth(0, .5, seconds - state.exit / 1000);
       let x = (WIDTH - heading.length * 16) / 2 + 8;
-      for (const character of heading) { drawFontGlyph(ctx, images.nonameFont, character, x, 84, .5, alpha * headingAlpha); x += 16; }
+      for (const character of heading) { drawFontGlyph(ctx, images.nonameFont, character, x, 84, .5, alpha * headingAlpha, baseAlpha); x += 16; }
     }
+    ctx.restore();
   }
 
   function compileLogoWave() {
@@ -222,7 +242,7 @@
     const source=document.createElement('canvas');source.width=width+2*padding+2*margin;source.height=height;
     source.getContext('2d').drawImage(images.logo,margin+padding,0,width,height);
     const rows=document.createElement('canvas');rows.width=width+2*padding;rows.height=height;
-    effect.logo={width,height,margin,padding,source,rows,table:compileLogoWave()};
+    effect.logo={width,height,margin,padding,source,rows,rowsContext:rows.getContext('2d'),table:compileLogoWave()};
   }
 
   function drawWarpedLogo(effect,ctx,images,seconds,alpha=1){
@@ -231,7 +251,7 @@
     const travel=age>=0?smooth(.5,1.5,age):0;
     const flatMix=age>=0?smooth(1.1,1.5,age):0;
     const tick=Math.floor(seconds*60+1e-7),gain=.5*strength;
-    const rows=logo.rows.getContext('2d');rows.clearRect(0,0,logo.rows.width,logo.rows.height);
+    const rows=logo.rowsContext;rows.clearRect(0,0,logo.rows.width,logo.rows.height);
     for(let row=0;row<logo.height;row++){
       const sample=logo.table[(tick+row)%logo.table.length]+64;
       const offset=64+(sample-64)*gain;
@@ -250,7 +270,7 @@
   }
 
   function drawEqualizer(effect,ctx,seconds,alpha=1){
-    const gradient=ctx.createLinearGradient(0,327,0,400);gradient.addColorStop(0,'#ffff00');gradient.addColorStop(1,'#ff0000');ctx.fillStyle=gradient;ctx.save();ctx.globalAlpha*=alpha;
+    let gradient=effect.equalizerGradients.get(ctx);if(!gradient){gradient=ctx.createLinearGradient(0,327,0,400);gradient.addColorStop(0,'#ffff00');gradient.addColorStop(1,'#ff0000');effect.equalizerGradients.set(ctx,gradient);}ctx.fillStyle=gradient;ctx.save();ctx.globalAlpha*=alpha;
     const frame=clamp(Math.floor(seconds*50+1e-7),0,2000);
     for(let column=0;column<80;column++){
       const level=(effect.equalizer[frame*80+column]||0)*72/255;
@@ -260,9 +280,11 @@
   }
 
   function create(images){
-    const stars=Array.from({length:STAR_COUNT},(_,index)=>vec((noise(index*3+14001)-.5)*2*STAR_RADIUS,(noise(index*3+14002)-.5)*2*STAR_RADIUS,(noise(index*3+14003)-.5)*2*STAR_RADIUS));
+    const stars=new Float64Array(STAR_COUNT*3);for(let index=0;index<STAR_COUNT;index++){const offset=index*3;stars[offset]=(noise(index*3+14001)-.5)*2*STAR_RADIUS;stars[offset+1]=(noise(index*3+14002)-.5)*2*STAR_RADIUS;stars[offset+2]=(noise(index*3+14003)-.5)*2*STAR_RADIUS;}
     const equalizer=Uint8Array.from(atob(root.DMA40Equalizer||''),character=>character.charCodeAt(0));
-    const effect={stars,patterns:delayPatterns(),pages:pageText(),poses:[],equalizer};prepareLogo(effect,images);return effect;
+    const point=()=>({point:vec(),fade:0});
+    const posePool=Array.from({length:160},(_,index)=>({index,character:' ',x:0,y:0,z:0}));
+    const effect={stars,currentStar:point(),previousStar:point(),projectedStar:vec(),previousProjectedStar:vec(),patterns:delayPatterns(),pages:pageText(),posePool,poses:posePool.slice(),equalizer,equalizerGradients:new WeakMap()};prepareLogo(effect,images);return effect;
   }
 
   function draw(effect,ctx,images,seconds){

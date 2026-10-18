@@ -4,7 +4,7 @@
  */
 (function () {
 'use strict';
-const {boot, Layer, palette, stColor, indexAt, u16, s16, u32, word} = window.CODEFDemo;
+const {boot, IndexedLayer, palette, stColor, indexAt, u16, s16, u32, word} = window.CODEFDemo;
 
 class PanelClock {
   constructor(data) { Object.assign(this, {order: Array.from({length: data.length / 4}, (_, i) => u32(data, i * 4)), cursor: 0, direction: 1, cycle: 5, stepN: 0, offset: 0, base: 0, mode: 0, down: false, peak: false, draw: false, commit: false}); }
@@ -55,9 +55,9 @@ async function createScene({assets, screen, sound}) {
   const state = {tick: 0, front: 1, letters: Array.from({length: 3}, (_, i) => Array.from({length: 8}, (_, j) => s16(motion, i * 16 + j * 2))), history: [[], []], away: [false, false, false]};
   const colors = palette(pal), sharedColors = window.DMA40PanelExchange.colors(pal);
   const sharedLetters = letters.map(letter => window.DMA40PanelExchange.bakeIndexed(letter, sharedColors));
-  const background = new Layer(320, 240); background.fill();
+  const background = new IndexedLayer(320, 240); background.fill();
   for (let y = 0; y < 5; y++) background.blit(art, 0, y * 40, 0, 35, 320, 40);
-  const buffers = [new Layer(320, 240), new Layer(320, 240)], text = new Layer(320, 240), initial = new Layer(320, 40), initialPixels = new Uint8Array(320 * 40);
+  const buffers = [new IndexedLayer(320, 240), new IndexedLayer(320, 240)], text = new IndexedLayer(320, 240), initial = new IndexedLayer(320, 40), initialPixels = new Uint8Array(320 * 40);
   for (let y = 0; y < 40; y++) for (let x = 0; x < 320; x++) initialPixels[y * 320 + x] = (indexAt(art.data, ((y + 35) * 320 + x) * 4) & 1) * 15;
   initial.indices(initialPixels);
   const panel = new PanelClock(order), clock = new Lockbuster3Scroll(message), rasters = [];
@@ -107,13 +107,33 @@ async function createScene({assets, screen, sound}) {
       }
       state.front = target;
     },
-    render() {
-      const p = buffers[state.front].pixels(), t = text.pixels();
-      screen.paint((x, y, at) => {
-        let i = indexAt(p, at); if (y >= 160 && y < 200) i = i - i % 2 + Math.round(t[at] / 255);
-        if ((i === 12 || i === 14) && y >= 159 && y < 159 + rasters.length) return rasters[y - 159];
-        return colors[i];
-      });
+    render(commit = true) {
+      const pixels = buffers[state.front].pixels(), textPixels = text.pixels(), output = screen.rgba;
+      for (let y = 0; y < 240; y++) {
+        const start = y * 320, end = start + 320;
+        const hasText = y >= 160 && y < 200;
+        const hasRaster = y >= 159 && y < 159 + rasters.length;
+        const rasterColor = hasRaster ? rasters[y - 159] : 0;
+        if (!hasText && !hasRaster) {
+          for (let pixel = start; pixel < end; pixel++) output[pixel] = colors[pixels[pixel]];
+        } else if (hasText && hasRaster) {
+          for (let pixel = start; pixel < end; pixel++) {
+            const index = pixels[pixel] - pixels[pixel] % 2 + (textPixels[pixel] >= 8 ? 1 : 0);
+            output[pixel] = index === 12 || index === 14 ? rasterColor : colors[index];
+          }
+        } else if (hasText) {
+          for (let pixel = start; pixel < end; pixel++) {
+            const index = pixels[pixel] - pixels[pixel] % 2 + (textPixels[pixel] >= 8 ? 1 : 0);
+            output[pixel] = colors[index];
+          }
+        } else {
+          for (let pixel = start; pixel < end; pixel++) {
+            const index = pixels[pixel];
+            output[pixel] = index === 12 || index === 14 ? rasterColor : colors[index];
+          }
+        }
+      }
+      if(commit)screen.commit();
     }
   };
 }

@@ -60,7 +60,12 @@
       panels[name] = {scene, screen, width, height};
     }
     window.CODEF_ASSETS = previousAssets;
-    const quad = {tick: 0, visualSound, panels, images, dma: window.DMA40DMAIsBack.create(images)};
+    const quad = {tick: 0, visualSound, panels, images, dma: window.DMA40DMAIsBack.create(images),presenter:new runtime.PixelPresenter(WIDTH,HEIGHT)};
+    quad.panelRegions = [
+      {x:0,y:0,width:320,height:240,pixels:panels.lockbuster.screen.rgba},
+      {x:320,y:0,width:320,height:200,pixels:panels.rastermaster.screen.rgba},
+      {x:320,y:200,width:320,height:200,pixels:panels.chonchon.screen.rgba}
+    ];
     quad.visitors = createVisitors();
     return quad;
   }
@@ -115,6 +120,10 @@
     }
   }
 
+  function presentQuadPanels(quad){
+    quad.presenter.drawRegions(quad.panelRegions);
+  }
+
   function syncQuad(quad, seconds) {
     const target = Math.max(0, Math.floor(seconds * 50 + 1e-7));
     if (target < quad.tick) return false;
@@ -129,7 +138,10 @@
       quad.tick++;
     }
     updateVisitors(quad, target / 50);
-    for (const panel of Object.values(quad.panels)) panel.scene.render();
+    quad.panels.lockbuster.scene.render(false);
+    quad.panels.rastermaster.scene.render(false);
+    quad.panels.chonchon.scene.render(false);
+    presentQuadPanels(quad);
     window.DMA40DMAIsBack.draw(quad.dma, quad.images);
     return true;
   }
@@ -281,8 +293,10 @@
     if (!state.previous) state.previous = now;
     if (!state.paused && !document.hidden && !state.completed) {
       state.accumulator += Math.min(250, now - state.previous);
+      let advanced = false;
       while (state.accumulator >= 1000 / timeline.FPS) {
         state.tick++;
+        advanced = true;
         state.accumulator -= 1000 / timeline.FPS;
         if (state.tick >= Math.round(timeline.DURATION * timeline.FPS)) {
           state.tick = Math.round(timeline.DURATION * timeline.FPS);
@@ -291,8 +305,10 @@
           break;
         }
       }
-      if (state.tick % 25 === 0) { syncAudio(state); refreshUI(state); }
-      render(state);
+      if (advanced) {
+        if (state.tick % 25 === 0) { syncAudio(state); refreshUI(state); }
+        render(state);
+      }
     }
     state.previous = now;
     window.requestAnimFrame(next => loop(state, next));
@@ -503,10 +519,9 @@
       ctx.drawImage(state.images.four, 0, 0, WIDTH, HEIGHT);
       return;
     }
-    const panels = state.quad.panels;
-    ctx.drawImage(panels.lockbuster.screen.codef.canvas, 0, 0, 320, 240, 0, 0, 320, 200);
-    ctx.drawImage(panels.rastermaster.screen.codef.canvas, 320, 0, 320, 200);
-    ctx.drawImage(panels.chonchon.screen.codef.canvas, 0, 200, 320, 200);
+    ctx.drawImage(state.quad.presenter.canvas, 0, 0, 320, 240, 0, 0, 320, 200);
+    ctx.drawImage(state.quad.presenter.canvas, 320, 0, 320, 200, 320, 0, 320, 200);
+    ctx.drawImage(state.quad.presenter.canvas, 320, 200, 320, 200, 0, 200, 320, 200);
     ctx.drawImage(state.quad.dma.canvas, 0, 0, 640, 400, 320, 200, 320, 200);
     drawVisitors(state.quad, ctx);
   }

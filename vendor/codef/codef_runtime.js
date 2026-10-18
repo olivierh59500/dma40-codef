@@ -14,6 +14,15 @@ const stColor = w => (0xff000000 | ((w & 7) * 34 << 16) | ((w >> 4 & 7) * 34 << 
 const palette = b => Array.from({length: b.length / 2}, (_, i) => stColor(u16(b, i * 2)));
 const words = b => Array.from({length: b.length / 2}, (_, i) => u16(b, i * 2));
 const indexAt = (p, at) => Math.round(p[at] / 17);
+const PLANAR_PAIRS = (() => {
+  const result = new Uint32Array(65536);
+  for (let first = 0; first < 256; first++) for (let second = 0; second < 256; second++) {
+    let packed = 0;
+    for (let pixel = 0; pixel < 8; pixel++) packed |= ((first >> (7 - pixel) & 1) | (second >> (7 - pixel) & 1) << 1) << (pixel * 4);
+    result[first << 8 | second] = packed >>> 0;
+  }
+  return result;
+})();
 
 class Assets {
   constructor(base = './assets/') { this.base = base; this.cache = new Map(); }
@@ -86,7 +95,238 @@ class Layer {
   }
   paint(fn) {
     for (let y = 0, i = 0; y < this.height; y++) for (let x = 0; x < this.width; x++, i++) this.rgba[i] = fn(x, y, i * 4, i);
-    this.codef.contex.putImageData(this.upload, 0, 0); this.data = null;
+    this.commit();
+  }
+  commit() { this.codef.contex.putImageData(this.upload, 0, 0); this.data = null; }
+}
+
+function indexedPixels(image) {
+  if (image instanceof IndexedLayer) return image.data;
+  if (!image.indexedData) {
+    const result = new Uint8Array(image.width * image.height);
+    const alpha = new Uint8Array(result.length);
+    let opaque = true, binaryAlpha = true;
+    for (let index = 0, at = 0; index < result.length; index++, at += 4) {
+      result[index] = Math.round(image.data[at] / 17);
+      alpha[index] = image.data[at + 3];
+      if (alpha[index] !== 255) opaque = false;
+      if (alpha[index] !== 0 && alpha[index] !== 255) binaryAlpha = false;
+    }
+    image.indexedData = result;
+    image.indexedAlpha = alpha;
+    image.indexedOpaque = opaque;
+    image.indexedBinaryAlpha = binaryAlpha;
+    if (binaryAlpha && !opaque) {
+      image.indexedRuns = Array.from({length: image.height}, (_, row) => {
+        const runs = [];
+        const start = row * image.width, end = start + image.width;
+        for (let pixel = start; pixel < end;) {
+          while (pixel < end && alpha[pixel] === 0) pixel++;
+          const left = pixel - start;
+          while (pixel < end && alpha[pixel] === 255) pixel++;
+          if (pixel > start + left) runs.push(left, pixel - start);
+        }
+        return runs;
+      });
+    }
+  }
+  return image.indexedData;
+}
+
+function indexedAlpha(image) {
+  if (image instanceof IndexedLayer) return image.alpha;
+  indexedPixels(image);
+  return image.indexedAlpha;
+}
+
+// IndexedLayer keeps Atari bitplane pixels in CPU memory. The four-panel
+// composition can therefore update and recolor its native screens without a
+// synchronous Canvas getImageData readback on every frame.
+class IndexedLayer {
+  constructor(width = 320, height = 200) {
+    this.width = width;
+    this.height = height;
+    this.data = new Uint8Array(width * height);
+    this.alpha = new Uint8Array(width * height);
+    this.planeWords = new Uint16Array(8);
+    this.opaque = false;
+  }
+  clear() { this.data.fill(0); this.alpha.fill(0); this.opaque = false; }
+  fill(value = 0) { this.data.fill(value); this.alpha.fill(255); this.opaque = true; }
+  rect(x, y, width, height, value = 0) {
+    x = Math.trunc(x); y = Math.trunc(y); width = Math.trunc(width); height = Math.trunc(height);
+    const left = Math.max(0, x), top = Math.max(0, y), right = Math.min(this.width, x + width), bottom = Math.min(this.height, y + height);
+    for (let row = top; row < bottom; row++) {
+      this.data.fill(value, row * this.width + left, row * this.width + right);
+      this.alpha.fill(255, row * this.width + left, row * this.width + right);
+    }
+    if (left === 0 && top === 0 && right === this.width && bottom === this.height) this.opaque = true;
+  }
+  blit(image, x = 0, y = 0, sourceX = 0, sourceY = 0, width = image.width, height = image.height) {
+    x = Math.trunc(x); y = Math.trunc(y); sourceX = Math.trunc(sourceX); sourceY = Math.trunc(sourceY); width = Math.trunc(width); height = Math.trunc(height);
+    const source = indexedPixels(image), sourceAlpha = indexedAlpha(image), sourceWidth = image.width, sourceHeight = image.height;
+    const sourceOpaque = image instanceof IndexedLayer ? image.opaque : image.indexedOpaque;
+    if (x < 0) { sourceX -= x; width += x; x = 0; }
+    if (y < 0) { sourceY -= y; height += y; y = 0; }
+    if (sourceX < 0) { x -= sourceX; width += sourceX; sourceX = 0; }
+    if (sourceY < 0) { y -= sourceY; height += sourceY; sourceY = 0; }
+    width = Math.min(width, this.width - x, sourceWidth - sourceX);
+    height = Math.min(height, this.height - y, sourceHeight - sourceY);
+    if (width <= 0 || height <= 0) return;
+    if (!(image instanceof IndexedLayer) && image.indexedRuns && width >= 32) {
+      const sourceRight = sourceX + width;
+      for (let row = 0; row < height; row++) {
+        const sourceTop = (sourceY + row) * sourceWidth;
+        const destinationTop = (y + row) * this.width + x;
+        const runs = image.indexedRuns[sourceY + row];
+        for (let run = 0; run < runs.length; run += 2) {
+          const left = Math.max(sourceX, runs[run]), right = Math.min(sourceRight, runs[run + 1]);
+          if (right <= left) continue;
+          const destination = destinationTop + left - sourceX;
+          this.data.set(source.subarray(sourceTop + left, sourceTop + right), destination);
+          this.alpha.fill(255, destination, destination + right - left);
+        }
+      }
+      return;
+    }
+    for (let row = 0; row < height; row++) {
+      const from = (sourceY + row) * sourceWidth + sourceX;
+      const to = (y + row) * this.width + x;
+      if (sourceOpaque) {
+        this.data.set(source.subarray(from, from + width), to);
+        this.alpha.fill(255, to, to + width);
+        continue;
+      }
+      for (let column = 0; column < width; column++) {
+        const sourcePixel = from + column, destinationPixel = to + column, sourceOpacity = sourceAlpha[sourcePixel];
+        if (sourceOpacity === 0) continue;
+        if (sourceOpacity === 255 || this.alpha[destinationPixel] === 0) {
+          this.data[destinationPixel] = source[sourcePixel];
+          this.alpha[destinationPixel] = sourceOpacity;
+          continue;
+        }
+        const destinationOpacity = this.alpha[destinationPixel];
+        const inverse = 255 - sourceOpacity;
+        const outputOpacity = sourceOpacity + destinationOpacity * inverse / 255;
+        this.data[destinationPixel] = Math.round((source[sourcePixel] * sourceOpacity + this.data[destinationPixel] * destinationOpacity * inverse / 255) / outputOpacity);
+        this.alpha[destinationPixel] = Math.round(outputOpacity);
+      }
+    }
+    if (sourceOpaque && x === 0 && y === 0 && width === this.width && height === this.height) this.opaque = true;
+  }
+  copy(image, x = 0, y = 0, sourceX = 0, sourceY = 0, width = image.width, height = image.height) {
+    const destinationX = Math.trunc(x), destinationY = Math.trunc(y);
+    const left = Math.max(0, destinationX), top = Math.max(0, destinationY);
+    const right = Math.min(this.width, destinationX + Math.max(0, Math.trunc(width)));
+    const bottom = Math.min(this.height, destinationY + Math.max(0, Math.trunc(height)));
+    for (let row = top; row < bottom; row++) {
+      this.data.fill(0, row * this.width + left, row * this.width + right);
+      this.alpha.fill(0, row * this.width + left, row * this.width + right);
+    }
+    if (right > left && bottom > top) this.opaque = false;
+    this.blit(image, x, y, sourceX, sourceY, width, height);
+  }
+  pixels() { return this.data; }
+  indices(values, transparent = false) {
+    this.data.set(values.subarray ? values.subarray(0, this.data.length) : values);
+    if (!transparent) { this.alpha.fill(255); this.opaque = true; return; }
+    this.opaque = true;
+    for (let index = 0; index < this.data.length; index++) {
+      this.alpha[index] = this.data[index] ? 255 : 0;
+      if (!this.alpha[index]) this.opaque = false;
+    }
+  }
+  planar(bytes, planes = 4, stride = this.width / 16 * planes * 2) {
+    if (planes === 4) {
+      for (let y = 0; y < this.height; y++) for (let group = 0; group < this.width / 16; group++) {
+        const source = y * stride + group * 8;
+        const destination = y * this.width + group * 16;
+        for (let half = 0; half < 2; half++) {
+          let packed = PLANAR_PAIRS[bytes[source + half] << 8 | bytes[source + 2 + half]] |
+            PLANAR_PAIRS[bytes[source + 4 + half] << 8 | bytes[source + 6 + half]] << 2;
+          const output = destination + half * 8;
+          for (let pixel = 0; pixel < 8; pixel++, packed >>>= 4) this.data[output + pixel] = packed & 15;
+        }
+      }
+      this.alpha.fill(255);
+      this.opaque = true;
+      return;
+    }
+    const words = this.planeWords;
+    for (let y = 0; y < this.height; y++) for (let group = 0; group < this.width / 16; group++) {
+      const source = y * stride + group * planes * 2;
+      for (let plane = 0; plane < planes; plane++) words[plane] = u16(bytes, source + plane * 2);
+      const destination = y * this.width + group * 16;
+      for (let bit = 0; bit < 16; bit++) {
+        let value = 0;
+        for (let plane = 0; plane < planes; plane++) value |= (words[plane] >> (15 - bit) & 1) << plane;
+        this.data[destination + bit] = value;
+      }
+    }
+    this.alpha.fill(255);
+    this.opaque = true;
+  }
+}
+
+// PixelPresenter uploads one packed RGBA frame through WebGL. This avoids the
+// slow putImageData path used by several Android Chromium builds while keeping
+// an exact nearest-neighbor copy of the authored indexed pixels.
+class PixelPresenter {
+  constructor(width, height) {
+    this.width = width;
+    this.height = height;
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.gl = this.canvas.getContext('webgl', {alpha:false, antialias:false, depth:false, preserveDrawingBuffer:true});
+    if (!this.gl) {
+      this.context = this.canvas.getContext('2d');
+      this.image = this.context.createImageData(width, height);
+      this.rgba = new Uint32Array(this.image.data.buffer);
+      return;
+    }
+    const gl = this.gl;
+    const shader = (type, source) => {
+      const result = gl.createShader(type);
+      gl.shaderSource(result, source); gl.compileShader(result);
+      if (!gl.getShaderParameter(result, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(result));
+      return result;
+    };
+    const program = gl.createProgram();
+    gl.attachShader(program, shader(gl.VERTEX_SHADER, 'attribute vec2 p;attribute vec2 u;varying vec2 v;void main(){v=u;gl_Position=vec4(p,0.0,1.0);}'));
+    gl.attachShader(program, shader(gl.FRAGMENT_SHADER, 'precision mediump float;uniform sampler2D t;varying vec2 v;void main(){gl_FragColor=texture2D(t,v);}'));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+    gl.useProgram(program);
+    const vertices = new Float32Array([-1,-1,0,1, 1,-1,1,1, -1,1,0,0, 1,1,1,0]);
+    const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    const position = gl.getAttribLocation(program, 'p'), uv = gl.getAttribLocation(program, 'u');
+    gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(uv); gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 16, 8);
+    this.texture = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.uniform1i(gl.getUniformLocation(program, 't'), 0); gl.viewport(0, 0, width, height);
+  }
+  draw(pixels) {
+    this.drawRegions([{x:0,y:0,width:this.width,height:this.height,pixels}]);
+  }
+  drawRegions(regions) {
+    if (!this.gl) {
+      for(const region of regions)for(let row=0;row<region.height;row++){
+        const source=row*region.width,destination=(region.y+row)*this.width+region.x;
+        this.rgba.set(region.pixels.subarray(source,source+region.width),destination);
+      }
+      this.context.putImageData(this.image, 0, 0); return;
+    }
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    for(const region of regions){
+      region.bytes ||= new Uint8Array(region.pixels.buffer,region.pixels.byteOffset,region.pixels.byteLength);
+      gl.texSubImage2D(gl.TEXTURE_2D,0,region.x,region.y,region.width,region.height,gl.RGBA,gl.UNSIGNED_BYTE,region.bytes);
+    }
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 }
 
@@ -248,5 +488,5 @@ async function boot(config, createScene) {
   window.requestAnimFrame(loop);
 }
 
-Object.assign(window.CODEFDemo ||= {}, {clamp, mod, word, u16, s16, u32, s32, put16, put32, stColor, palette, words, indexAt, Assets, Layer, SliceStream, Soundtrack, boot});
+Object.assign(window.CODEFDemo ||= {}, {clamp, mod, word, u16, s16, u32, s32, put16, put32, stColor, palette, words, indexAt, indexedPixels, Assets, Layer, IndexedLayer, PixelPresenter, SliceStream, Soundtrack, boot});
 })();

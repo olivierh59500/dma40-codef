@@ -66,9 +66,8 @@
     return cycles * values.at(-1) + values[position];
   }
 
-  function fillCumulative(values, start, count) {
-    const output = new Int32Array(count);
-    for (let index = 0; index < count; index++) output[index] = cumulativeAt(values, start + index);
+  function fillCumulative(values, start, output) {
+    for (let index = 0; index < output.length; index++) output[index] = cumulativeAt(values, start + index);
     return output;
   }
 
@@ -76,6 +75,99 @@
     if ("!',.:;I".includes(character)) return 16;
     if (' "()-<=>'.includes(character)) return 32;
     return 48;
+  }
+
+  // The original scroller is made of 134 three-pixel strips. Android
+  // Chromium handles the same geometry much more smoothly as one WebGL draw.
+  class ScanlineRenderer {
+    constructor() {
+      this.canvas = document.createElement('canvas');
+      this.canvas.width = WIDTH;
+      this.canvas.height = HEIGHT;
+      this.gl = this.canvas.getContext('webgl', {alpha:false,antialias:false,depth:false,preserveDrawingBuffer:true});
+      this.available = Boolean(this.gl);
+      this.ready = false;
+      this.vertices = new Float32Array(Math.ceil(HEIGHT / ROW_HEIGHT) * 2 * 6 * 4);
+      if (!this.available) return;
+      const gl = this.gl;
+      if (!gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT).precision) {
+        this.available = false;
+        return;
+      }
+      const shader = (type, source) => {
+        const result = gl.createShader(type);
+        gl.shaderSource(result, source);
+        gl.compileShader(result);
+        if (!gl.getShaderParameter(result, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(result));
+        return result;
+      };
+      const program = gl.createProgram();
+      gl.attachShader(program, shader(gl.VERTEX_SHADER, 'attribute vec2 p;attribute vec2 u;varying vec2 v;void main(){v=u;gl_Position=vec4(p.x/320.0-1.0,1.0-p.y/200.0,0.0,1.0);}'));
+      gl.attachShader(program, shader(gl.FRAGMENT_SHADER, 'precision highp float;uniform sampler2D t;varying vec2 v;void main(){gl_FragColor=texture2D(t,v);}'));
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+      gl.useProgram(program);
+      this.buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, this.vertices.byteLength, gl.DYNAMIC_DRAW);
+      const position = gl.getAttribLocation(program, 'p'), uv = gl.getAttribLocation(program, 'u');
+      gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
+      gl.enableVertexAttribArray(uv); gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 16, 8);
+      this.texture = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.viewport(0, 0, WIDTH, HEIGHT);
+    }
+    upload(surface) {
+      if (!this.available) return;
+      try {
+        const gl = this.gl;
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, surface);
+        this.ready = true;
+      } catch (_) {
+        // A file:// page can display local images while WebGL correctly
+        // refuses to upload their tainted canvas. Canvas remains available.
+        this.available = false;
+        this.ready = false;
+      }
+    }
+    quad(offset, destinationX, destinationY, sourceX, sourceY, width, height) {
+      const left = destinationX, top = destinationY, right = left + width, bottom = top + height;
+      const u0 = sourceX / SURFACE_WIDTH, v0 = sourceY / (SOURCE_ROWS * ROW_HEIGHT);
+      const u1 = (sourceX + width) / SURFACE_WIDTH, v1 = (sourceY + height) / (SOURCE_ROWS * ROW_HEIGHT);
+      const values = [left,top,u0,v0, right,top,u1,v0, left,bottom,u0,v1, left,bottom,u0,v1, right,top,u1,v0, right,bottom,u1,v1];
+      this.vertices.set(values, offset);
+      return offset + values.length;
+    }
+    draw(waves, origin, bounce) {
+      if (!this.available || !this.ready) return false;
+      let offset = 0;
+      for (let top = 0; top < HEIGHT; top += ROW_HEIGHT) {
+        const height = Math.min(ROW_HEIGHT, HEIGHT - top), row = Math.floor(top / ROW_HEIGHT);
+        const raw = waves[row] - origin, sourceY = ((row + bounce) % SOURCE_ROWS) * ROW_HEIGHT;
+        if (raw < 0) {
+          const width = WIDTH + raw;
+          if (width > 0) offset = this.quad(offset, -raw, top, 0, sourceY, width, height);
+          continue;
+        }
+        const sourceX = raw % SURFACE_WIDTH;
+        if (sourceX >= SURFACE_WIDTH - WIDTH) {
+          const first = SURFACE_WIDTH - sourceX;
+          offset = this.quad(offset, 0, top, sourceX, sourceY, first, height);
+          offset = this.quad(offset, first, top, 0, sourceY, WIDTH - first, height);
+        } else offset = this.quad(offset, 0, top, sourceX, sourceY, WIDTH, height);
+      }
+      const gl = this.gl;
+      gl.clearColor(0, 0, 96 / 255, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.vertices.subarray(0, offset));
+      gl.drawArrays(gl.TRIANGLES, 0, offset / 4);
+      return true;
+    }
   }
 
   function create(images) {
@@ -89,7 +181,8 @@
     const positions = [];
     let position = 0;
     for (const glyph of glyphs) { position += glyph.width * 3; positions.push(position); }
-    const panel = {tick:0,away:false,canvas,context,surface,surfaceContext,glyphs,positions,wave:makeWave(),displayedLetter:-1};
+    const panel = {tick:0,away:false,canvas,context,surface,surfaceContext,glyphs,positions,wave:makeWave(),displayedLetter:-1,
+      waves:new Int32Array(Math.ceil(HEIGHT/ROW_HEIGHT)),scanlines:new ScanlineRenderer()};
     panel.cube = createCube();
     return panel;
   }
@@ -211,13 +304,14 @@
       x += glyph.width * 3;
       index++;
     }
+    panel.scanlines.upload(panel.surface);
   }
 
   function drawScanline(panel, images) {
     const context = panel.context;
     context.fillStyle = '#000060';
     context.fillRect(0, 0, WIDTH, HEIGHT);
-    const waves = fillCumulative(panel.wave, panel.tick * 10, Math.ceil(HEIGHT / ROW_HEIGHT));
+    const waves = fillCumulative(panel.wave, panel.tick * 10, panel.waves);
     let decal = Infinity;
     for (let row = 0; row < 36; row++) decal = Math.min(decal, waves[row]);
     decal = Math.max(0, decal);
@@ -226,6 +320,10 @@
     const origin = cursorPosition(panel, letter);
     const bounce = Math.floor(18 * Math.abs(Math.sin(panel.tick * .1)));
     prepareSurface(panel, images, letter);
+    if (panel.scanlines.draw(waves, origin, bounce)) {
+      context.drawImage(panel.scanlines.canvas, 0, 0);
+      return;
+    }
     for (let top = 0; top < HEIGHT; top += 3) {
       const height = Math.min(3, HEIGHT - top);
       const row = Math.floor(top / ROW_HEIGHT);
