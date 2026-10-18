@@ -1,0 +1,9 @@
+CODEF — Canvas Oldschool Demo Effects Framework
+Author: Antoine Santo (N0NameN0) and contributors
+Source: https://github.com/N0NameN0/CODEF
+Commit: 61b8346dff51bbc2520e858dbf34c17f7c8ff4e6
+Downloaded: 2026-10-11
+codef_core.js and codef_music.NoMinified.js are unmodified upstream files.
+codef_runtime.js is the shared runtime from the DMA CODEF collection, adapted
+for this production's isolated panel renderers and English interface. Upstream
+MIT license notices remain in the CODEF source files.

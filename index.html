@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="DMA40 — a 640×400, 50 Hz HTML/JavaScript and CODEF port of the complete DMA megademo.">
+  <title>DMA40 · JavaScript / CODEF</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script src="vendor/codef/codef_core.js"></script>
+  <script defer src="vendor/codef/codef_music.NoMinified.js"></script>
+  <script defer src="vendor/codef/codef_runtime.js"></script>
+  <script defer src="panels/assets.js"></script>
+  <script defer src="panels/exchange.js"></script>
+  <script defer src="panels/lockbuster.js"></script>
+  <script defer src="panels/rastermaster.js"></script>
+  <script defer src="panels/chonchon.js"></script>
+  <script defer src="effects/leonard-cube.js"></script>
+  <script defer src="effects/dma-is-back.js"></script>
+  <script defer src="timeline.js"></script>
+  <script defer src="assets/intro/copper-offsets.js"></script>
+  <script defer src="assets/parts/spoon/circle-data.js"></script>
+  <script defer src="effects/spoon.js"></script>
+  <script defer src="effects/city.js"></script>
+  <script defer src="assets/parts/spoon/equalizer-data.js"></script>
+  <script defer src="effects/noname.js"></script>
+  <script defer src="assets/parts/jelly/floor-data.js"></script>
+  <script defer src="assets/portrait/colors.js"></script>
+  <script defer src="effects/jelly.js"></script>
+  <script defer src="demo.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">DMA / 1987–2027 / JavaScript / CODEF</p>
+      <h1>DMA40</h1>
+      <p class="lead">The story continues in the browser.</p>
+    </div>
+    <div class="tags" aria-label="Technologies"><span>HTML</span><span>JavaScript</span><span>CODEF</span><span>50 Hz</span></div>
+  </header>
+
+  <main>
+    <section class="player" aria-labelledby="player-title">
+      <div class="player-heading">
+        <div>
+          <p class="eyebrow">Complete browser production</p>
+          <h2 id="player-title">Five minutes and thirty seconds of DMA</h2>
+        </div>
+        <p class="hint">Double-click the canvas or press Space to advance one authored scene.</p>
+      </div>
+      <div id="screen" aria-live="off"></div>
+      <nav class="controls" aria-label="Playback controls">
+        <button id="sound" class="primary" type="button" aria-pressed="false">Enable sound</button>
+        <button id="pause" type="button">Pause</button>
+        <button id="skip" type="button">Next scene</button>
+        <button id="restart" type="button">Restart</button>
+        <button id="fullscreen" type="button">Fullscreen</button>
+      </nav>
+      <p id="status" role="status">Loading DMA40 assets…</p>
+    </section>
+
+    <section class="about">
+      <h2>A new DMA production</h2>
+      <p>DMA40 follows the complete sequence of the Go/Ebitengine production: four historic DMA screens, vectorballs and the spoon, volumetric flight, Matrix rain, Pac-Men, the circular scroll and lens, the DeLorean and Elon interlude, Noname, Jelly DMA, flocking, the portrait, the audience question and the final page of pi.</p>
+      <p>The browser version runs on a deterministic 50 Hz timeline. CODEF owns the 640×400 canvas while source-derived JavaScript engines reproduce every transition and effect. The complete Opus soundtrack begins only after a user enables sound.</p>
+      <blockquote>French fries are good for you :)</blockquote>
+    </section>
+  </main>
+
+  <footer>
+    <span>DMA40 · Bilizir / DMA</span>
+    <span>Built with <a href="https://github.com/N0NameN0/CODEF">CODEF</a></span>
+  </footer>
+  <noscript>DMA40 requires JavaScript.</noscript>
+</body>
+</html>

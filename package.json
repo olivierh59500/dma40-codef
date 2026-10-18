@@ -1,0 +1,10 @@
+{
+  "name": "dma40-codef",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8080 --bind 127.0.0.1",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check demo.js && node --check timeline.js && node --check effects/leonard-cube.js && node --check effects/dma-is-back.js && node --check effects/spoon.js && node --check effects/city.js && node --check effects/noname.js && node --check effects/jelly.js && node --check panels/exchange.js && node --check panels/lockbuster.js && node --check panels/rastermaster.js && node --check panels/chonchon.js && node --test tests/*.test.js"
+  }
+}

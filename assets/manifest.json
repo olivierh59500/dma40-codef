@@ -1,0 +1,369 @@
+{
+  "files": [
+    {
+      "file": "audio/dma40.webm",
+      "bytes": 7615861,
+      "sha256": "245ee19dff4cab7537a3b751bf0a10b1538aaef7f19b3fe728098fc2c31e1d55"
+    },
+    {
+      "file": "city/elon-comic.png",
+      "bytes": 1253427,
+      "sha256": "2c5a6c474e2c29e63ef635721426beca25630818f08150e8f55bf157c4b7ccd9"
+    },
+    {
+      "file": "intro/ball.png",
+      "bytes": 839,
+      "sha256": "0ff1139149a559ab5dbd51b96531755806c70236a4ab136aa9ba810504e310db"
+    },
+    {
+      "file": "intro/bars.png",
+      "bytes": 3728,
+      "sha256": "5b733d6ffbaa642fafc85130d842c6ff6e7a69b3333a00c9e87033dd1c092395"
+    },
+    {
+      "file": "intro/chrome.png",
+      "bytes": 32249,
+      "sha256": "d25aedb93df3c6d74367e27fabf1313f77a9e27dbd320ca0dae069ddca8613cc"
+    },
+    {
+      "file": "intro/copper-offsets.js",
+      "bytes": 4867,
+      "sha256": "a02709006f620c57b63509236f6bc9aecf9ae17c14e47e1fe9a535f34bdfb664"
+    },
+    {
+      "file": "intro/font-grey.png",
+      "bytes": 735,
+      "sha256": "9b101d9b0c66d9fdec04018e398063373068b4991fef560596b8d82cb333263f"
+    },
+    {
+      "file": "intro/loader.ogg",
+      "bytes": 38136,
+      "sha256": "91278bf16ea3dcaf43eb22c4c2c64f2ab72830da0ff74dba0a721cd8c3ee9d8b"
+    },
+    {
+      "file": "intro/logo.png",
+      "bytes": 766399,
+      "sha256": "e162b8f5c61dbc8a83272d96525bb15cfe4415794f1ca0f51c4ee8c6d74da023"
+    },
+    {
+      "file": "intro/music.ym",
+      "bytes": 202847,
+      "sha256": "e03ddc3b752fea1f556ba8eb970d41be7c41e35499b9d0da9f6793f27ea97695"
+    },
+    {
+      "file": "intro/union-font.png",
+      "bytes": 2138,
+      "sha256": "f42286735dd779401de42a89a2859c1f96b6aacdddb0989acdf9ab790e1559f0"
+    },
+    {
+      "file": "parts/chonchon/background.bin",
+      "bytes": 32000,
+      "sha256": "d52396de65789e6ac6389996469bf0aa521a04435a43e745a7e8ccb71d9b7631"
+    },
+    {
+      "file": "parts/chonchon/font-source.bin",
+      "bytes": 64807,
+      "sha256": "6cebe654c4a2dc1fca476bcaaa6e55aae6e1701f5426827299d79a3a167f26fb"
+    },
+    {
+      "file": "parts/chonchon/logo-bank.png",
+      "bytes": 6342,
+      "sha256": "25dd37bc3a99417a6d5595c8370d46fdad8f6f2958e0bf3297110fa806b8ea9b"
+    },
+    {
+      "file": "parts/chonchon/logo-path.bin",
+      "bytes": 40000,
+      "sha256": "4f209e2cfe6e2e44aab8484fc17486296d6f1fd80bb4761c6deb50ae5a7e5e7c"
+    },
+    {
+      "file": "parts/chonchon/logo-y.bin",
+      "bytes": 724,
+      "sha256": "deaf8fc05826d66f5cb72cd7ad109ef7ad3a221d5daf8b97c9e491377c6b095d"
+    },
+    {
+      "file": "parts/chonchon/message.bin",
+      "bytes": 190,
+      "sha256": "13c09aee162a5c2f13948f039c89cfc9b645782b1cde481cb9ff7d706358ce5f"
+    },
+    {
+      "file": "parts/chonchon/meter-raw.bin",
+      "bytes": 8320,
+      "sha256": "bf1f08d9d02408fd63afeae7aa96ccae455e65d60dea40c9668265d8a9e221d6"
+    },
+    {
+      "file": "parts/chonchon/palette.bin",
+      "bytes": 32,
+      "sha256": "3b1d5e2a456184dd76443ae2b54172c25a850da51a92858d209d5e56a79861d0"
+    },
+    {
+      "file": "parts/chonchon/raster.bin",
+      "bytes": 56,
+      "sha256": "e03da3140e5e43be2f4109b3646303545b2f0cf03e72204ee3c91bfb0a0e66ec"
+    },
+    {
+      "file": "parts/chonchon/scroll-y.bin",
+      "bytes": 5832,
+      "sha256": "39f7d72fc1122e92011848a5577d1099205f47a00a218535053513a93a232a2d"
+    },
+    {
+      "file": "parts/chonchon/star-index.bin",
+      "bytes": 600,
+      "sha256": "9c0ee771ca1c762d9bcd240fad0d9436eaafcf6eabfd4d3de645b1a485df99b1"
+    },
+    {
+      "file": "parts/chonchon/star-paths.bin",
+      "bytes": 54000,
+      "sha256": "3166ada9d2e7ae38770e2a0d113bda924f2cb55220e6770fce711d1b074e2346"
+    },
+    {
+      "file": "parts/chonchon/volume-curve.bin",
+      "bytes": 16,
+      "sha256": "a74f57552b6a10f155c63fa5f9d7317bf4a6522b6b10e4b3eb7e1d603ec21447"
+    },
+    {
+      "file": "parts/dma/back.png",
+      "bytes": 72763,
+      "sha256": "bb616288db0ddb727a9e3044c6e6ce8b8f5a89ba6ee6eddb5ea2c6e67a255838"
+    },
+    {
+      "file": "parts/dma/font.png",
+      "bytes": 20373,
+      "sha256": "cb5ed54d5a53d6dc1be281a0c78e3ce7e0a1bc95bb213dcedbf83fc294e690ad"
+    },
+    {
+      "file": "parts/jelly/floor-colors.bin",
+      "bytes": 1032,
+      "sha256": "5a3402a8ab8d4044ee911dab16bd3c85ff482b3d4cf2f9f4309145db3cba4fd8"
+    },
+    {
+      "file": "parts/jelly/floor-data.js",
+      "bytes": 1480,
+      "sha256": "4201147f13c68c5b4831f509d7b6a1659feb650a7868b57da719700dcd12f4bd"
+    },
+    {
+      "file": "parts/jelly/music.ym",
+      "bytes": 3232,
+      "sha256": "1e0957679949de80c7343f31bb61dd9c2353e8c91c303e8ad0ffc67261672002"
+    },
+    {
+      "file": "parts/lockbuster/artwork.png",
+      "bytes": 2734,
+      "sha256": "34fb5bab81561376072f9743a88dc9a23f91e6c6cc7d2d36129efd547e59a212"
+    },
+    {
+      "file": "parts/lockbuster/font-0.png",
+      "bytes": 14257,
+      "sha256": "64fb88b111d83c92020c4d537140b2b75272a9494a0bda79a230eceef3763d97"
+    },
+    {
+      "file": "parts/lockbuster/font-1.png",
+      "bytes": 11616,
+      "sha256": "904bb75562dedc6f98c8ff197a01b69db71cc25466370a110e796e92719dfe78"
+    },
+    {
+      "file": "parts/lockbuster/letter-a.png",
+      "bytes": 413,
+      "sha256": "19c9b35cc75acbc2938c0736d41014c2ec9007e8ebce6ab4223251b2ef5acc10"
+    },
+    {
+      "file": "parts/lockbuster/letter-d.png",
+      "bytes": 405,
+      "sha256": "413514ba47477490701e141ff4a16f014eecd82ab771a1ecf50e3542709d878d"
+    },
+    {
+      "file": "parts/lockbuster/letter-m.png",
+      "bytes": 524,
+      "sha256": "b1f32457da0305a8cfebc5ed24e9fac77ece0f7056a568b524ee887bfcd86c7d"
+    },
+    {
+      "file": "parts/lockbuster/message.bin",
+      "bytes": 1144,
+      "sha256": "33c590ed109d7e1f3b0896a10f80b3c4ff858ecd8ebbf979365b01ace43c8c47"
+    },
+    {
+      "file": "parts/lockbuster/motion.bin",
+      "bytes": 48,
+      "sha256": "b790b603542e5e75e0f55e94d546b9ae8e23d35fb46221aa53ac3310927b68b7"
+    },
+    {
+      "file": "parts/lockbuster/palette.bin",
+      "bytes": 32,
+      "sha256": "07f685f7c1af6fbb0f065c4c1fa35fb574c31e0da9bb7e7ab9afa4a6faf9f43c"
+    },
+    {
+      "file": "parts/lockbuster/panel-order.bin",
+      "bytes": 256,
+      "sha256": "f1059fa3a851540a0510054e74bbc53e88bd7a307a68f5db94bb662369f08ccd"
+    },
+    {
+      "file": "parts/lockbuster/panels-0.png",
+      "bytes": 4690,
+      "sha256": "fd7cec9b4e8483095c69274d8ce119362ff5f5f643fa5bbc7f4f77d8226d93dc"
+    },
+    {
+      "file": "parts/lockbuster/panels-1.png",
+      "bytes": 6850,
+      "sha256": "928f2edef831cb8f05ce146dad2de2eb856df0c30815a1e182ba73d984536dbe"
+    },
+    {
+      "file": "parts/lockbuster/panels-2.png",
+      "bytes": 4554,
+      "sha256": "e0f15f8e965dd7c6cc1b4724396af118f46d9615ecca3311d3f2841a8d8ded65"
+    },
+    {
+      "file": "parts/lockbuster/rasters.bin",
+      "bytes": 154,
+      "sha256": "92c93cb84b5de7198febebf42e5b5e4ebb72ea9f63f9f2c2442db37822a2e3e8"
+    },
+    {
+      "file": "parts/music.ym",
+      "bytes": 9774,
+      "sha256": "10742b5997456703a576d987dea419705513535a36a144f9f586c9181e66459c"
+    },
+    {
+      "file": "parts/rastermaster/dma.png",
+      "bytes": 1319,
+      "sha256": "053b9befcb54f5dbd47f71f29f20cab026a190fd8044437a3be600d0e71e2abe"
+    },
+    {
+      "file": "parts/rastermaster/font-main.png",
+      "bytes": 5823,
+      "sha256": "a0e329ed67f2792e2355427aedf9cf4dd021d4be427bbe155bf44dcbd64a4823"
+    },
+    {
+      "file": "parts/rastermaster/font-small.png",
+      "bytes": 1056,
+      "sha256": "7f503b8efba35913278e6bd740f668c9770a4ecf96f4a379eeae91490612cad8"
+    },
+    {
+      "file": "parts/rastermaster/from-bank.png",
+      "bytes": 905,
+      "sha256": "5749e55389a360105dc97eb8c54d2422c89fa866db41f844839dad19d1d5dd04"
+    },
+    {
+      "file": "parts/rastermaster/from-wave.bin",
+      "bytes": 7200,
+      "sha256": "e8d5d16c787bc0c5af571d49f0c1432c3f54e91ce46e53a3c4c8980407d969e8"
+    },
+    {
+      "file": "parts/rastermaster/logo-wave.bin",
+      "bytes": 6288,
+      "sha256": "706da654b4ea070e24acb07ecf839343970a43674e4f6eacb3fa5d2795cee908"
+    },
+    {
+      "file": "parts/rastermaster/message-main.bin",
+      "bytes": 799,
+      "sha256": "db66b610f1f588763c5fb9bbf57b2e1c9768761a182637c49d11e717be235573"
+    },
+    {
+      "file": "parts/rastermaster/message-small.bin",
+      "bytes": 264,
+      "sha256": "73541e4466a3135e9b611abf68b6b1003b09339270fbd2b9c74bbacb04408ef3"
+    },
+    {
+      "file": "parts/rastermaster/palette.bin",
+      "bytes": 32,
+      "sha256": "c577ff2f1da1774b5e4d0a06b4a0a04332d495279c98d3526cb7b067c63bad15"
+    },
+    {
+      "file": "parts/rastermaster/raster-black.bin",
+      "bytes": 402,
+      "sha256": "645c0f377debd8df3a455c47dd552bac806a6092e929b5580ff8ce25fcdd8e09"
+    },
+    {
+      "file": "parts/rastermaster/raster-blue.bin",
+      "bytes": 402,
+      "sha256": "ba3748139bb5381b6846329e03207cf57d1e73740d588ef1a7770559797a6e82"
+    },
+    {
+      "file": "parts/rastermaster/raster-materials.bin",
+      "bytes": 800,
+      "sha256": "6645fb32b64526a60113d7ea734a416a9d24171a647c363fd87bfec53ce7f345"
+    },
+    {
+      "file": "parts/rastermaster/raster-positions.bin",
+      "bytes": 360,
+      "sha256": "99311abcaf7fd8ec3185f0004a82c14762152dd05c41dc817aab18aba675fabc"
+    },
+    {
+      "file": "parts/rastermaster/raster-rolling.bin",
+      "bytes": 96,
+      "sha256": "52a88556d33bf180a3025ad3e5900d18ee79159a6c39604e1b6fb073fa56399a"
+    },
+    {
+      "file": "parts/rastermaster/raster-small.bin",
+      "bytes": 44,
+      "sha256": "205530a4ef182f19b7e7174b999bf79d9bc6bafd08dc2221a2055032597518e5"
+    },
+    {
+      "file": "parts/rastermaster/raster-wide.bin",
+      "bytes": 44,
+      "sha256": "71be8763fb7352053d44ab823883dd48b4f0e31cbb1d10c1bf168fe45e144d16"
+    },
+    {
+      "file": "parts/rastermaster/scroll-wave.bin",
+      "bytes": 16064,
+      "sha256": "5a56304841b7e77c563338bb7bef8cd818010f12375f212226f66d6539749278"
+    },
+    {
+      "file": "parts/rastermaster/title-palette.bin",
+      "bytes": 32,
+      "sha256": "6fac743f21f8d9ee52a254e6f3e67f14db8ebf73432d0f8ae2705e26549b0e40"
+    },
+    {
+      "file": "parts/rastermaster/title.png",
+      "bytes": 2706,
+      "sha256": "9f84c531e591117f589f6051311205096f004f2693fd8b74721ec54fde715e13"
+    },
+    {
+      "file": "parts/rastermaster/top-bank.png",
+      "bytes": 15752,
+      "sha256": "012402995c2fae443b05aaf8d4f0b82dc2caee42a4fe6c538e04be8a57e80d2e"
+    },
+    {
+      "file": "parts/spoon/balls.png",
+      "bytes": 731,
+      "sha256": "5e82d0f652383190f09fbc60862042ab4eac6340f4c6f113ea2c2b51eba393f0"
+    },
+    {
+      "file": "parts/spoon/circle-data.js",
+      "bytes": 4868,
+      "sha256": "8d5fca5a8802e16caf1591166d9f5d22ddce273b6c2fddb4754b2cc8d0e9033c"
+    },
+    {
+      "file": "parts/spoon/circle.json",
+      "bytes": 4754,
+      "sha256": "1aaee463a75799ebf449729c3f89a4bf8faaa19391c2c86d6de5533951fd78d1"
+    },
+    {
+      "file": "parts/spoon/equalizer-data.js",
+      "bytes": 213536,
+      "sha256": "60af871ea19750e8e2d22fcf4ad194294f0d6f7385750474e07686ad0b3564f6"
+    },
+    {
+      "file": "parts/spoon/music.mod",
+      "bytes": 143136,
+      "sha256": "a64be22f2f10bd8d7005aa7e77b6cc0b8960bdcf931d42d012e817a0bf0f262d"
+    },
+    {
+      "file": "parts/spoon/noname-font.png",
+      "bytes": 21945,
+      "sha256": "6c1f89adc0946b8ef0c8e4eb4158856d8d703c80a510ec84035ed07de1299b05"
+    },
+    {
+      "file": "portrait/colors.js",
+      "bytes": 41104,
+      "sha256": "7fefc2e028b99d1f0a9632e511a3a971e1e093bc2041a67d8805a07130e959ec"
+    },
+    {
+      "file": "portrait/portrait.jpg",
+      "bytes": 144651,
+      "sha256": "b93ccbb075a82e51aae8b854cd15b81d3e461273bfbeb846f6fb26643287a1ad"
+    },
+    {
+      "file": "timeline.json",
+      "bytes": 5872,
+      "sha256": "065c56afb340aece41fc8f78373d26dc225d1c078eba1d4c52cc78cfc01e2ebc"
+    }
+  ]
+}
